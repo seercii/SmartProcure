@@ -12,7 +12,6 @@
 ## Teknoloji Stack
 
 - **Backend:** SAP CAP (Cloud Application Programming Model)
-- **Database:** SQLite (dev), SAP HANA Cloud (production)
 - **Frontend:** SAP Fiori Elements + UI5
 - **AI:** Groq API (Llama 3.3-70B)
 - **Deployment:** SAP BTP Cloud Foundry
