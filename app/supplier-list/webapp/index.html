@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <title>SmartProcure - Tedarikçi Yönetimi</title>
+    <style>
+        html,
+        body,
+        body>div,
+        #container,
+        #container-uiarea {
+            height: 100%;
+        }
+
+        #ai-panel {
+            display: none;
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            width: 440px;
+            max-height: 75vh;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.18);
+            z-index: 9999;
+            overflow: hidden;
+            font-family: '72', Arial, sans-serif;
+            border: 1px solid #e0e0e0;
+        }
+
+        #ai-panel-header {
+            background: linear-gradient(135deg, #0070f2, #0040b0);
+            color: white;
+            padding: 14px 18px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-weight: 600;
+            font-size: 15px;
+        }
+
+        #ai-panel-close {
+            cursor: pointer;
+            font-size: 18px;
+            opacity: 0.8;
+            transition: opacity 0.2s;
+        }
+
+        #ai-panel-close:hover {
+            opacity: 1;
+        }
+
+        #ai-panel-body {
+            padding: 18px;
+            overflow-y: auto;
+            max-height: calc(75vh - 52px);
+        }
+
+        #ai-risk-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-weight: 700;
+            font-size: 13px;
+            margin-bottom: 14px;
+            letter-spacing: 0.3px;
+        }
+
+        .risk-low {
+            background: #e8f5e9;
+            color: #1b5e20;
+            border: 1px solid #a5d6a7;
+        }
+
+        .risk-medium {
+            background: #fff8e1;
+            color: #e65100;
+            border: 1px solid #ffcc80;
+        }
+
+        .risk-high {
+            background: #ffebee;
+            color: #b71c1c;
+            border: 1px solid #ef9a9a;
+        }
+
+        #ai-result-text {
+            font-size: 13.5px;
+            line-height: 1.7;
+            color: #333;
+        }
+
+        #ai-result-text br {
+            display: block;
+            margin: 3px 0;
+        }
+
+        #ai-analyze-btn {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            background: linear-gradient(135deg, #0070f2, #0040b0);
+            color: white;
+            border: none;
+            padding: 13px 22px;
+            border-radius: 28px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            box-shadow: 0 4px 14px rgba(0, 112, 242, 0.4);
+            z-index: 9998;
+            display: none;
+            transition: all 0.2s;
+            letter-spacing: 0.2px;
+        }
+
+        #ai-analyze-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 6px 18px rgba(0, 112, 242, 0.5);
+        }
+
+        #ai-analyze-btn:disabled {
+            opacity: 0.7;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        #ai-loading {
+            display: none;
+            text-align: center;
+            padding: 20px;
+            color: #666;
+        }
+
+        .ai-spinner {
+            width: 32px;
+            height: 32px;
+            border: 3px solid #e3e3e3;
+            border-top: 3px solid #0070f2;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            margin: 0 auto 10px;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+    </style>
+    <script id="sap-ui-bootstrap" src="https://sapui5.hana.ondemand.com/1.147.0/resources/sap-ui-core.js"
+        data-sap-ui-theme="sap_horizon" data-sap-ui-resource-roots='{"smartprocure.supplierlist": "./"}'
+        data-sap-ui-on-init="module:sap/ui/core/ComponentSupport" data-sap-ui-compat-version="edge"
+        data-sap-ui-async="true" data-sap-ui-frame-options="trusted"></script>
+</head>
+
+<body class="sapUiBody sapUiSizeCompact" id="content">
+    <div data-sap-ui-component data-name="smartprocure.supplierlist" data-id="container"
+        data-settings='{"id" : "smartprocure.supplierlist"}' data-handle-validation="true"></div>
+
+    <button id="ai-analyze-btn" onclick="analyzeSupplier()">
+        🤖 AI ile Analiz Et
+    </button>
+
+    <div id="ai-panel">
+        <div id="ai-panel-header">
+            <span>🤖 AI Tedarikçi Analizi</span>
+            <span id="ai-panel-close" onclick="closePanel()">✕</span>
+        </div>
+        <div id="ai-panel-body">
+            <div id="ai-loading">
+                <div class="ai-spinner"></div>
+                <div>AI analiz yapıyor...</div>
+            </div>
+            <div id="ai-content">
+                <div id="ai-risk-badge"></div>
+                <div id="ai-result-text"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function getSupplierIdFromUrl() {
+            const hash = window.location.hash;
+            const match = hash.match(/Suppliers\('([^']+)'\)/);
+            return match ? match[1] : null;
+        }
+
+        function checkUrl() {
+            const supplierId = getSupplierIdFromUrl();
+            const btn = document.getElementById('ai-analyze-btn');
+            const panel = document.getElementById('ai-panel');
+            if (supplierId) {
+                if (panel.style.display !== 'block') {
+                    btn.style.display = 'block';
+                }
+            } else {
+                btn.style.display = 'none';
+                panel.style.display = 'none';
+            }
+        }
+
+        window.addEventListener('hashchange', checkUrl);
+        setInterval(checkUrl, 500);
+
+        async function analyzeSupplier() {
+            const supplierId = getSupplierIdFromUrl();
+            if (!supplierId) return;
+
+            const btn = document.getElementById('ai-analyze-btn');
+            const loading = document.getElementById('ai-loading');
+            const content = document.getElementById('ai-content');
+            const panel = document.getElementById('ai-panel');
+
+            btn.style.display = 'none';
+            panel.style.display = 'block';
+            loading.style.display = 'block';
+            content.style.display = 'none';
+
+            try {
+                const response = await fetch(
+                    `/procurement/Suppliers('${supplierId}')/analyzeSupplier`,
+                    {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: '{}'
+                    }
+                );
+                const data = await response.json();
+
+                const riskMap = {
+                    HIGH: { label: '🔴 YÜKSEK RİSK', cls: 'risk-high' },
+                    MEDIUM: { label: '🟡 ORTA RİSK', cls: 'risk-medium' },
+                    LOW: { label: '🟢 DÜŞÜK RİSK', cls: 'risk-low' }
+                };
+                const risk = riskMap[data.riskLevel] || riskMap.LOW;
+
+                const badge = document.getElementById('ai-risk-badge');
+                badge.textContent = risk.label;
+                badge.className = risk.cls;
+
+                const formatted = (data.recommendation || '')
+                    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+                    .replace(/\n\n/g, '</p><p>')
+                    .replace(/\n/g, '<br>');
+                document.getElementById('ai-result-text').innerHTML = '<p>' + formatted + '</p>';
+
+                loading.style.display = 'none';
+                content.style.display = 'block';
+
+            } catch (err) {
+                loading.style.display = 'none';
+                content.style.display = 'block';
+                document.getElementById('ai-result-text').innerHTML =
+                    '<span style="color:red">Hata: ' + err.message + '</span>';
+            }
+        }
+
+        function closePanel() {
+            document.getElementById('ai-panel').style.display = 'none';
+            const supplierId = getSupplierIdFromUrl();
+            if (supplierId) {
+                document.getElementById('ai-analyze-btn').style.display = 'block';
+            }
+        }
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,28 @@
+<core:FragmentDefinition
+  xmlns="sap.m"
+  xmlns:core="sap.ui.core">
+
+  <VBox id="aiVBox" class="sapUiMediumMargin">
+    <Title id="aiTitle" text="AI Tedarikçi Analizi" level="H3" class="sapUiSmallMarginBottom"/>
+    <Button
+      id="aiAnalyzeBtn"
+      text="AI ile Analiz Et"
+      type="Emphasized"
+      icon="sap-icon://lightbulb"
+      press=".onAnalyzeSupplier"
+      class="sapUiSmallMarginBottom"
+    />
+    <Panel id="aiResultPanel" visible="false" class="sapUiSmallMarginTop">
+      <headerToolbar>
+        <Toolbar id="aiToolbar">
+          <Title id="aiResultTitle" text="Analiz Sonucu"/>
+          <ToolbarSpacer id="aiSpacer"/>
+          <Text id="riskStatus" text=""/>
+        </Toolbar>
+      </headerToolbar>
+      <content>
+        <FormattedText id="aiResultText" htmlText="" width="100%" class="sapUiSmallMargin"/>
+      </content>
+    </Panel>
+  </VBox>
+</core:FragmentDefinition>
